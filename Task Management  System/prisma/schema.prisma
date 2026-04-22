@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("MONGO_URI")
+}
+
+//
+// 👤 USER MODEL
+//
+model User {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  email     String   @unique
+  password  String
+  name      String
+  createdAt DateTime @default(now())
+
+  tasks     Task[]
+}
+
+//
+// 📝 TASK MODEL
+//
+model Task {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String?
+  priority    Priority @default(MEDIUM)
+  status      Status   @default(NOT_STARTED)
+  dueDate     DateTime?
+  createdAt   DateTime @default(now())
+
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+//
+// ⚡ PRIORITY ENUM
+//
+enum Priority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+//
+// 📌 STATUS ENUM
+//
+enum Status {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
