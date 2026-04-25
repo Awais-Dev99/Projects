@@ -25,7 +25,7 @@ export default function Column({
   onAdd,
 }: ColumnProps) {
   return (
-    <div className="bg-gray-50 p-4 rounded-2xl min-h-[420px] shadow-sm border">
+    <div className="bg-gray-50 p-4 rounded-2xl h-[500px] flex flex-col shadow-sm border">
 
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
@@ -49,7 +49,7 @@ export default function Column({
           No tasks
         </p>
       ) : (
-        <div className="space-y-3">
+      <div className="space-y-3 overflow-y-auto pr-1 flex-1">
           {tasks.map((task, index) => (
             <div
               key={task.id}
