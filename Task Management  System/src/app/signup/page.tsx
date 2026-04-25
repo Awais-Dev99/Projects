@@ -12,12 +12,15 @@ export default function Signup() {
     password: "",
   });
 
+  const [loading, setLoading] = useState(false);
+
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setLoading(true);
 
     try {
       const res = await fetch("/api/auth/signup", {
@@ -31,26 +34,29 @@ export default function Signup() {
       const data = await res.json();
 
       if (!res.ok) {
-  const errors = data.error?.fieldErrors;
+        const errors = data.error?.fieldErrors;
 
-  if (errors) {
-    const firstError =
-      errors.password?.[0] ||
-      errors.email?.[0] ||
-      errors.name?.[0];
+        if (errors) {
+          const firstError =
+            errors.name?.[0] ||
+            errors.email?.[0] ||
+            errors.password?.[0];
 
-    alert(firstError || "Validation error");
-  } else {
-    alert("Something went wrong");
-  }
+          alert(firstError);
+        } else {
+          alert("Signup failed");
+        }
 
-  return;
-}
+        return;
+      }
 
       alert("Signup successful! Please login.");
       router.push("/login");
     } catch (err) {
       console.error(err);
+      alert("Something went wrong");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -90,8 +96,11 @@ export default function Signup() {
           required
         />
 
-        <button className="w-full bg-blue-500 text-white py-2 rounded-lg">
-          Signup
+        <button
+          disabled={loading}
+          className="w-full bg-blue-500 text-white py-2 rounded-lg disabled:opacity-50"
+        >
+          {loading ? "Signing up..." : "Signup"}
         </button>
 
         <p className="text-sm mt-3 text-center">
