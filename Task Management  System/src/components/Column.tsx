@@ -25,7 +25,8 @@ export default function Column({
   onAdd,
 }: ColumnProps) {
   return (
-    <div className="bg-gray-50 p-4 rounded-2xl h-[500px] flex flex-col shadow-sm border">
+    <div className="bg-gray-50 p-4 rounded-2xl flex flex-col shadow-sm border
+           h-auto sm:h-[400px] lg:h-[500px]">
 
       {/* Header */}
       <div className="flex justify-between items-center mb-4">

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { createTask, updateTask } from "@/services/taskService";
 
+
 type Task = {
   id: string;
   title: string;
@@ -19,6 +20,7 @@ type Props = {
 };
 
 export default function TaskModal({ task, onClose, onSuccess }: Props) {
+   const [loading, setLoading] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<"LOW" | "MEDIUM" | "HIGH">("MEDIUM");
@@ -67,6 +69,7 @@ export default function TaskModal({ task, onClose, onSuccess }: Props) {
     };
 
     try {
+       setLoading(true);
       if (task) {
         await updateTask( task.id, payload);
       } else {
@@ -79,6 +82,9 @@ export default function TaskModal({ task, onClose, onSuccess }: Props) {
       console.error("Save error:", err);
       alert("Something went wrong");
     }
+    finally {
+    setLoading(false); // ✅ stop loading
+  }
   };
 
   return (
@@ -133,12 +139,19 @@ export default function TaskModal({ task, onClose, onSuccess }: Props) {
         />
 </p>
         <div className="flex justify-between">
-          <button
-            onClick={handleSubmit}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
-          >
-            {task ? "Update" : "Create"}
-          </button>
+         <button
+  onClick={handleSubmit}
+  disabled={loading}
+  className={`flex items-center justify-center gap-2 px-4 py-2 rounded text-white transition
+    ${loading ? "bg-blue-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"}
+  `}
+>
+  {loading && (
+    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+  )}
+
+  {task ? (loading ? "Updating..." : "Update") : (loading ? "Creating..." : "Create")}
+</button>
 
           <button
             onClick={onClose}

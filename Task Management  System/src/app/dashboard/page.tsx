@@ -93,65 +93,84 @@ export default function Dashboard() {
   };
 
   return (
-  <div className="flex min-h-screen">
+  <div className="min-h-screen flex flex-col lg:flex-row">
 
-    {/* ✅ SIDEBAR */}
-    <div className="w-64 bg-gray-900 text-white p-6 flex flex-col justify-between">
+    {/* ✅ SIDEBAR / TOPBAR */}
+    <div className="
+      w-full lg:w-64
+      bg-gray-900 text-white
+      p-4 lg:p-6
+      flex lg:flex-col justify-between items-center lg:items-stretch
+    ">
       
-      {/* Top Section */}
-      <div>
-        <h2 className="text-xl font-semibold mb-6">Task Manager</h2>
+      {/* Top */}
+      <div className="flex flex-col lg:block w-full">
+        <h2 className="text-lg lg:text-xl font-semibold mb-2 lg:mb-6">
+          Task Manager
+        </h2>
 
-        <div className="bg-gray-800 p-4 rounded-lg">
-          <p className="text-sm text-gray-400">Logged in as</p>
-          <p className="text-lg font-medium">
+        <div className="bg-gray-800 p-3 lg:p-4 rounded-lg">
+          <p className="text-xs lg:text-sm text-gray-400">Logged in as</p>
+          <p className="text-sm lg:text-lg font-medium">
             {name || "User"}
           </p>
         </div>
       </div>
 
-      {/* Bottom Section */}
+      {/* Logout */}
       <button
         onClick={handleLogout}
-        className="bg-red-500 hover:bg-red-600 px-4 py-2 rounded mt-6"
+        className="bg-red-500 hover:bg-red-600 px-3 py-1 lg:px-4 lg:py-2 rounded mt-3 lg:mt-6 text-sm"
       >
         Logout
       </button>
     </div>
 
-    {/* ✅ MAIN CONTENT */}
-    <div className="flex-1 p-6 bg-gray-100">
+    {/* ✅ MAIN */}
+    <div className="flex-1 p-4 sm:p-6 bg-gray-100">
 
       {/* HEADER */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-semibold">
           {name ? `Welcome, ${name} 👋` : "My Tasks"}
         </h1>
       </div>
 
-      {/* COLUMNS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Column
-          title="Not Started"
-          tasks={notStarted}
-          onClick={openModal}
-          onDelete={handleDelete}
-          onAdd={handleAddTask}
-        />
+      {/* ✅ COLUMNS CONTAINER */}
+      <div className="
+        flex flex-col gap-4
+        md:flex-row md:overflow-x-auto md:pb-2
+        lg:grid lg:grid-cols-3 lg:gap-6 lg:overflow-visible
+      ">
 
-        <Column
-          title="In Progress"
-          tasks={inProgress}
-          onClick={openModal}
-          onDelete={handleDelete}
-        />
+        <div className="min-w-full md:min-w-[300px] lg:min-w-0">
+          <Column
+            title="Not Started"
+            tasks={notStarted}
+            onClick={openModal}
+            onDelete={handleDelete}
+            onAdd={handleAddTask}
+          />
+        </div>
 
-        <Column
-          title="Completed"
-          tasks={completed}
-          onClick={openModal}
-          onDelete={handleDelete}
-        />
+        <div className="min-w-full md:min-w-[300px] lg:min-w-0">
+          <Column
+            title="In Progress"
+            tasks={inProgress}
+            onClick={openModal}
+            onDelete={handleDelete}
+          />
+        </div>
+
+        <div className="min-w-full md:min-w-[300px] lg:min-w-0">
+          <Column
+            title="Completed"
+            tasks={completed}
+            onClick={openModal}
+            onDelete={handleDelete}
+          />
+        </div>
+
       </div>
 
       {/* MODAL */}
@@ -164,5 +183,4 @@ export default function Dashboard() {
       )}
     </div>
   </div>
-);
-}
+)}

@@ -87,3 +87,25 @@ body {
 .delay-400 {
   animation-delay: 0.4s;
 }
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  60% {
+    transform: scale(2);
+    opacity: 0.35;
+  }
+  100% {
+    transform: scale(3.5);
+    opacity: 0;
+  }
+}
+
+.ripple {
+  position: absolute;
+  border-radius: 9999px;
+  background: rgba(53, 24, 24, 0.4); /* red splash for delete */
+  pointer-events: none;
+  animation: ripple 500ms ease-out;
+}
