@@ -1,8 +1,10 @@
 type Task = {
   id: string;
   title: string;
+  description?: string;
   priority: "HIGH" | "MEDIUM" | "LOW";
   status: "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED";
+  dueDate?: string;
 };
 
 type ColumnProps = {
@@ -12,6 +14,8 @@ type ColumnProps = {
   onDelete: (id: string) => void;
   onAdd?: () => void;
 };
+
+import TaskCard from "./TaskCard";
 
 export default function Column({
   title,
@@ -25,12 +29,14 @@ export default function Column({
 
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
-        <h2 className="font-semibold text-gray-700">{title}</h2>
+        <h2 className="font-semibold text-gray-700">
+          {title} ({tasks.length})
+        </h2>
 
         {onAdd && (
           <button
             onClick={onAdd}
-            className="text-xs bg-blue-500 text-white px-3 py-1 rounded-md"
+            className="text-xs bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md transition"
           >
             + Add
           </button>
@@ -44,44 +50,18 @@ export default function Column({
         </p>
       ) : (
         <div className="space-y-3">
-          {tasks.map((task) => (
+          {tasks.map((task, index) => (
             <div
               key={task.id}
               onClick={() => onClick(task)}
-              className="bg-white p-3 rounded-lg shadow-sm cursor-pointer hover:shadow-md"
+              style={{ animationDelay: `${index * 100}ms` }}
+              className="animate-fadeInUp"
             >
-              <div className="flex justify-between items-center">
-
-                {/* Title */}
-                <h3 className="text-sm font-medium text-gray-800">
-                  {task.title}
-                </h3>
-
-                {/* Priority badge */}
-                <span
-                  className={`text-xs px-2 py-1 rounded ${
-                    task.priority === "HIGH"
-                      ? "bg-red-100 text-red-600"
-                      : task.priority === "MEDIUM"
-                      ? "bg-yellow-100 text-yellow-600"
-                      : "bg-green-100 text-green-600"
-                  }`}
-                >
-                  {task.priority}
-                </span>
-
-                {/* Delete */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(task.id);
-                  }}
-                  className="text-red-400 hover:text-red-600 text-sm"
-                >
-                  🗑
-                </button>
-
-              </div>
+              <TaskCard
+                task={task}
+                
+                onDelete={onDelete}
+              />
             </div>
           ))}
         </div>
