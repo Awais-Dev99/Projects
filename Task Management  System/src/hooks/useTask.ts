@@ -32,7 +32,7 @@ export default function useTasks() {
   async function fetchTasks() {
     try {
       if (!token) return;
-      const data = await getTasks(token);
+      const data = await getTasks();
       setTasks(data);
     } catch (error) {
       console.error("Fetch error:", error);
@@ -53,7 +53,7 @@ export default function useTasks() {
     try {
       if (!token) return;
 
-      const newTask = await createTask(token, taskData);
+      const newTask = await createTask(token);
       setTasks((prev) => [newTask, ...prev]);
     } catch (error) {
       console.error("Create error:", error);
@@ -65,7 +65,7 @@ export default function useTasks() {
     try {
       if (!token) return;
 
-      const updated = await updateTask(token, id, data);
+      const updated = await updateTask(token, id);
 
       setTasks((prev) =>
         prev.map((t) => (t.id === id ? updated : t))
@@ -80,7 +80,7 @@ export default function useTasks() {
     try {
       if (!token) return;
 
-      await deleteTask(token, id);
+      await deleteTask(token);
 
       setTasks((prev) =>
         prev.filter((t) => t.id !== id)
