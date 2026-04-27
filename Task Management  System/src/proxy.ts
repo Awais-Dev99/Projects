@@ -13,7 +13,6 @@ export function proxy(request: NextRequest) {
   }
 
   const token = authHeader.split(" ")[1];
-
   const decoded = verifyToken(token);
 
   if (!decoded) {
@@ -36,3 +35,4 @@ export function proxy(request: NextRequest) {
 export const config = {
   matcher: ["/api/tasks/:path*"],
 };
+export default proxy;
