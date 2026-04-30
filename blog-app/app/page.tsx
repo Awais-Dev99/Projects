@@ -5,7 +5,7 @@ import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import InteractionBar from "@/components/InteractionBar";
-import { v4 as uuidv4 } from 'uuid';
+
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
