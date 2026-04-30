@@ -1,24 +1,15 @@
-import "./globals.css";
 import Navbar from "@/components/Navbar";
+import Providers from "@/components/Providers";
+import "./globals.css"; // Ensure the path is correct
 
-export const metadata = {
-  title: "My Blog App",
-  description: "Full stack blog with roles",
-};
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>
-        {/* Global Navbar */}
-        <Navbar />
-
-        {/* Page Content */}
-        <main className="min-h-screen">{children}</main>
+      <body className="bg-slate-50">
+        <Providers>
+          <Navbar />
+          <main className="max-w-7xl mx-auto py-8">{children}</main>
+        </Providers>
       </body>
     </html>
   );
