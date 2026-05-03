@@ -6,15 +6,18 @@ export default withAuth(
     const role = req.nextauth.token?.role;
     const path = req.nextUrl.pathname;
 
-    // 1. Admin ONLY access
-    // Only 'admin' can enter /admin routes
+    // Admin Access
     if (path.startsWith("/admin") && role !== "admin") {
       return NextResponse.redirect(new URL("/", req.url));
     }
 
-    // 2. Author access
-    // Allows 'author' OR 'admin' to enter /author routes
+    // Author Access
     if (path.startsWith("/author") && role !== "author" && role !== "admin") {
+      return NextResponse.redirect(new URL("/", req.url));
+    }
+
+    // Reader Access
+    if (path.startsWith("/reader") && role !== "reader" && role !== "admin") {
       return NextResponse.redirect(new URL("/", req.url));
     }
     
@@ -22,17 +25,19 @@ export default withAuth(
   },
   {
     callbacks: {
-      // This ensures the middleware only runs if the user is logged in
+      // ONLY require authorization if the user is hitting a matched route
       authorized: ({ token }) => !!token,
     },
+    pages: {
+        signIn: "/login"
+    }
   }
 );
 
-// Define which paths are protected by this middleware
 export const config = { 
   matcher: [
     "/admin/:path*", 
     "/author/:path*",
-    // Add other protected routes here if needed
+    "/reader/:path*",
   ] 
 };

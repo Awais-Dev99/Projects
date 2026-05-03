@@ -27,6 +27,7 @@ const PostSchema = new Schema(
     views: { type: Number, default: 0 },
   },
   { timestamps: true }
+  
 );
 
 // This ensures that when we fetch posts, we can use .populate('author') 

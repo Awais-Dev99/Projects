@@ -1,9 +1,11 @@
 "use server";
 
 import { connectDB } from "@/lib/mongodb";
+import { authOptions } from "@/lib/auth";
 import Post from "@/models/Post";
 import User from "@/models/User"; 
 import { revalidatePath } from "next/cache";
+import { getServerSession } from "next-auth";
 import mongoose from "mongoose"; // Import mongoose for ObjectId casting
 
 // --- 1. LIKE / DISLIKE ACTION ---
@@ -77,9 +79,36 @@ export async function updateComment(postId: string, commentId: string, userId: s
     console.error("Update Comment Error:", error);
   }
 }
+export async function deletePost(prevState: any, formData: FormData) {
+  try {
+    await connectDB();
+    const session = await getServerSession(authOptions);
+    const postId = formData.get("id");
 
+    if (!session) return { error: "Unauthenticated" };
+
+    const post = await Post.findById(postId);
+    if (!post) return { error: "Post not found" };
+
+    // Security: Check if the user owns the post
+    if (post.author.toString() !== (session.user as any).id && session.user.role !== "admin") {
+      return { error: "Unauthorized" };
+    }
+
+    await Post.findByIdAndDelete(postId);
+    
+    revalidatePath("/author/dashboard");
+    return { success: true };
+  } catch (e) {
+    return { error: "Failed to delete post" };
+  }
+}
+export type ActionState = {
+  error: string | null;
+  success: boolean;
+};
 // --- 5. ADMIN ACTIONS ---
-export async function approveAuthor(formData: FormData) {
+export async function approveAuthor(prevState: any,formData: FormData) {
   const userId = formData.get("id") as string;
   if (!userId) return { error: "User ID is required" };
   try {
