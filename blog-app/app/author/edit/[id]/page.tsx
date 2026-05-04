@@ -6,11 +6,17 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import EditForm from "@/components/EditForm";
 
-export default async function EditArticlePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function EditArticlePage({ 
+  params 
+}: { 
+  params: Promise<{ id: string }> 
+}) {
+  // 1. Await parameters as per Next.js 15 requirement
+  const { id } = await params;
+
   await connectDB();
   const session = await getServerSession(authOptions);
   const userId = (session?.user as any)?.id;
-  const { id } = await params;
 
   const post = await Post.findById(id);
   
@@ -21,10 +27,6 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
 
   return (
     <div className="w-full min-h-screen bg-white flex flex-col">
-      {/* 
-          SUB-HEADER ONLY: Matches the Create dashboard. 
-          Main BLOGOS navbar should reside in layout.tsx to avoid duplication. 
-      */}
       <nav className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-gray-100">
         <div className="w-full px-6 md:px-12 py-5 flex justify-between items-center max-w-7xl mx-auto">
           <div className="flex items-center gap-6">
@@ -43,15 +45,10 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
         </div>
       </nav>
 
-      {/* Main Content Area */}
       <main className="max-w-4xl mx-auto w-full px-6 pt-16 pb-40">
+         {/* Pass serialized data to Client Component */}
          <EditForm post={JSON.parse(JSON.stringify(post))} />
       </main>
-
-      {/* 
-          Note: Ensure your EditForm component includes the Floating Action Bar 
-          with type="submit" and form="edit-post-form" to match the Create page.
-      */}
     </div>
   );
 }
