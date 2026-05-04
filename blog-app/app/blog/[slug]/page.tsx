@@ -1,51 +1,65 @@
 import { connectDB } from "@/lib/mongodb";
 import Post from "@/models/Post";
+import User from "@/models/User"; // REQUIRED: Explicitly import for Mongoose population
 import { notFound } from "next/navigation";
 import InteractionBar from "@/components/InteractionBar";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import Link from "next/link";
 
-export default async function BlogPost({ params }: { params: Promise<{ slug: string }> }) {
+interface BlogPostProps {
+  params: Promise<{ slug: string }>;
+}
+
+export default async function BlogPost({ params }: BlogPostProps) {
   await connectDB();
   
-  const resolvedParams = await params;
-  const slug = resolvedParams.slug;
+  // Next.js 15: params must be awaited
+  const { slug } = await params;
 
   const session = await getServerSession(authOptions);
-  const userId = (session?.user as any)?.id;
+  const userId = session?.user?.id;
 
-  const rawPost = await Post.findOne({ slug: slug })
-    .populate("author", "name")
-    .populate("comments.user", "name")
+  // Fetch post and "join" user names for the author and all commenters
+  const rawPost = await Post.findOne({ slug })
+    .populate({
+      path: "author",
+      model: User,
+      select: "name",
+    })
+    .populate({
+      path: "comments.user", // Look inside the comments array
+      model: User,           // Target the User collection
+      select: "name",        // Only retrieve the name field
+    })
     .lean();
 
   if (!rawPost) {
     notFound();
   }
 
-  // Serialization to handle MongoDB ObjectIDs for the Client Component (InteractionBar)
+  // Serialization: Converts MongoDB ObjectIDs to strings for the Client Component
   const post = JSON.parse(JSON.stringify(rawPost));
 
   return (
     <article className="min-h-screen bg-white">
-      {/* Subtle Progress/Back Bar */}
+      {/* Sticky Navigation Bar */}
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-50 px-6 py-4">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
           <Link href="/" className="text-xs font-black uppercase tracking-[0.2em] text-gray-400 hover:text-blue-600 transition-colors">
             ← Back to Feed
           </Link>
-          <div className="hidden sm:block">
-             <span className="text-[10px] font-black uppercase tracking-widest text-gray-300">Reading Mode</span>
-          </div>
+          <span className="text-[10px] font-black uppercase tracking-widest text-gray-300 hidden sm:block">
+            Reading Mode
+          </span>
         </div>
       </nav>
 
       <div className="max-w-3xl mx-auto px-6 pt-16 md:pt-24 pb-32">
-        {/* Post Header */}
+        {/* Article Header */}
         <header className="mb-16">
           <div className="flex items-center gap-3 mb-6">
-            <div className="h-1 w-12 bg-blue-600 rounded-full"></div>
+            <div className="h-1 w-12 bg-blue-600 rounded-full" />
             <span className="text-xs font-black uppercase tracking-[0.3em] text-blue-600">Article</span>
           </div>
           
@@ -69,12 +83,14 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
           </div>
         </header>
 
-        {/* Article Body */}
-        <div className="prose prose-lg max-w-none mb-20 whitespace-pre-wrap text-gray-800 leading-[1.8] font-serif selection:bg-blue-100 selection:text-blue-900">
+        {/* Main Content Body */}
+        <div 
+          className="prose prose-lg max-w-none mb-20 whitespace-pre-wrap text-gray-800 leading-[1.8] font-serif selection:bg-blue-100 selection:text-blue-900"
+        >
           {post.content}
         </div>
 
-        {/* Interaction Section */}
+        {/* Comment & Interaction Footer */}
         <footer className="border-t border-gray-100 pt-16">
           <div className="bg-slate-50 rounded-[3rem] p-8 md:p-12 shadow-inner border border-gray-100">
             <div className="mb-10 text-center">

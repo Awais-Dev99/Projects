@@ -23,5 +23,5 @@ const UserSchema = new Schema(
 );
 
 // Prevent re-compiling the model if it already exists
-const User = models.User || model("User", UserSchema);
-export default User;
+// models/User.ts
+export default mongoose.models.User || mongoose.model("User", UserSchema);

@@ -134,8 +134,8 @@ export default function InteractionBar({
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1.5">
-                        {comment.user?.name || "Anonymous Reader"}
-                      </p>
+  {comment.user?.name || "Anonymous Reader"}
+</p>
                       
                       {editingCommentId === comment._id ? (
                         <div className="space-y-3">

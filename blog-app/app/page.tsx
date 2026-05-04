@@ -12,6 +12,10 @@ export default async function HomePage() {
 
   const rawPosts = await Post.find({ status: "published" })
     .populate("author", "name")
+    .populate({
+      path: "comments.user",    // Deep populate the user inside each comment
+      select: "name",           // Only fetch the name
+    })
     .sort({ createdAt: -1 })
     .lean();
 
