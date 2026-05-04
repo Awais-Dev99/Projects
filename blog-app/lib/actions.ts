@@ -8,20 +8,32 @@ import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import mongoose from "mongoose";
 
+// --- TYPES ---
 export type ActionState = {
   error: string | null;
   success: boolean;
+};
+
+// Helper to clean and generate slugs
+const generateSlug = (title: string) => {
+  const base = title
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `${base}-${Math.random().toString(36).substring(2, 7)}`;
 };
 
 // --- 1. LIKE / DISLIKE ACTION ---
 export async function handleLikeDislike(postId: string, userId: string, type: "like" | "dislike") {
   try {
     await connectDB();
-    const post = await Post.findById(postId);
-    if (!post) throw new Error("Post not found");
-
     const mainField = type === "like" ? "likes" : "dislikes";
     const oppositeField = type === "like" ? "dislikes" : "likes";
+
+    const post = await Post.findById(postId);
+    if (!post) throw new Error("Post not found");
 
     const alreadyDone = post[mainField].some((id: any) => id.toString() === userId);
 
@@ -33,6 +45,7 @@ export async function handleLikeDislike(postId: string, userId: string, type: "l
         $addToSet: { [mainField]: userId }
       });
     }
+    
     revalidatePath("/reader/dashboard");
     revalidatePath("/");
   } catch (error) {
@@ -40,7 +53,7 @@ export async function handleLikeDislike(postId: string, userId: string, type: "l
   }
 }
 
-// --- 2. ADD COMMENT ACTION ---
+// --- 2. COMMENT ACTIONS ---
 export async function addComment(postId: string, userId: string, content: string) {
   if (!content.trim()) return { error: "Content is required" };
   try {
@@ -60,7 +73,6 @@ export async function addComment(postId: string, userId: string, content: string
   }
 }
 
-// --- 3. DELETE COMMENT ACTION ---
 export async function deleteComment(postId: string, commentId: string, userId: string) {
   try {
     await connectDB();
@@ -70,12 +82,10 @@ export async function deleteComment(postId: string, commentId: string, userId: s
     revalidatePath("/reader/dashboard");
     return { success: true };
   } catch (error) {
-    console.error("Delete Comment Error:", error);
     return { error: "Failed to delete comment" };
   }
 }
 
-// --- 4. UPDATE COMMENT ACTION ---
 export async function updateComment(postId: string, commentId: string, userId: string, newContent: string) {
   try {
     await connectDB();
@@ -86,12 +96,11 @@ export async function updateComment(postId: string, commentId: string, userId: s
     revalidatePath("/reader/dashboard");
     return { success: true };
   } catch (error) {
-    console.error("Update Comment Error:", error);
     return { error: "Failed to update comment" };
   }
 }
 
-// --- 5. POST MANAGEMENT (NEXT.JS 15 COMPATIBLE) ---
+// --- 3. POST MANAGEMENT ---
 export async function deletePost(prevState: any, id: string): Promise<ActionState> {
   try {
     await connectDB();
@@ -102,7 +111,10 @@ export async function deletePost(prevState: any, id: string): Promise<ActionStat
     if (!post) return { error: "Post not found", success: false };
 
     // Security: Check ownership or admin status
-    if (post.author.toString() !== (session.user as any).id && (session.user as any).role !== "admin") {
+    const isOwner = post.author.toString() === (session.user as any).id;
+    const isAdmin = (session.user as any).role === "admin";
+
+    if (!isOwner && !isAdmin) {
       return { error: "Unauthorized", success: false };
     }
 
@@ -115,12 +127,67 @@ export async function deletePost(prevState: any, id: string): Promise<ActionStat
   }
 }
 
-// --- 6. ADMIN ACTIONS (FIXED FOR USEACTIONSTATE) ---
+export async function createPost(formData: FormData, authorId: string) {
+  const title = formData.get("title") as string;
+  const content = formData.get("content") as string;
+
+  if (!title || !content) return { error: "Title and Content are required" };
+
+  try {
+    await connectDB();
+    const slug = generateSlug(title);
+
+    const newPost = new Post({
+      title,
+      content,
+      slug,
+      author: new mongoose.Types.ObjectId(authorId),
+      status: "published",
+    });
+
+    await newPost.save();
+    revalidatePath("/author/dashboard");
+    revalidatePath("/");
+    return { success: true };
+  } catch (error: any) {
+    if (error.code === 11000) return { error: "Title already exists." };
+    return { error: "Failed to save post." };
+  }
+}
+
+export async function updatePost(postId: string, formData: FormData) {
+  const title = formData.get("title") as string;
+  const content = formData.get("content") as string;
+
+  if (!title || !content) return { error: "Title and Content are required" };
+
+  try {
+    await connectDB();
+    const updatedSlug = generateSlug(title);
+
+    const updatedPost = await Post.findByIdAndUpdate(
+      postId,
+      { title, content, slug: updatedSlug },
+      { new: true }
+    );
+
+    if (!updatedPost) return { error: "Post not found" };
+
+    revalidatePath("/author/dashboard");
+    revalidatePath("/");
+    return { success: true };
+  } catch (error: any) {
+    if (error.code === 11000) return { error: "An article with this title already exists." };
+    return { error: "Failed to update article." };
+  }
+}
+
+// --- 4. ADMIN ACTIONS ---
 export async function approveAuthor(prevState: any, userId: string): Promise<ActionState> {
   if (!userId) return { error: "User ID is required", success: false };
   try {
     await connectDB();
-    // Update role to author and status to approved
+    // Set role to author and update status
     await User.findByIdAndUpdate(userId, { role: "author", status: "approved" });
     revalidatePath("/admin/dashboard");
     return { error: null, success: true };
@@ -133,90 +200,10 @@ export async function rejectAuthor(prevState: any, userId: string): Promise<Acti
   if (!userId) return { error: "User ID is required", success: false };
   try {
     await connectDB();
-    // If rejecting involves deleting the request/user
     await User.findByIdAndDelete(userId);
     revalidatePath("/admin/dashboard");
     return { error: null, success: true };
   } catch (error) {
     return { error: "Failed to reject author", success: false };
-  }
-}
-
-// --- 7. CREATE POST ---
-export async function createPost(formData: FormData, authorId: string) {
-  const title = formData.get("title") as string;
-  const content = formData.get("content") as string;
-
-  if (!title || !content) return { error: "Title and Content are required" };
-
-  try {
-    await connectDB();
-
-    const baseSlug = title
-      .toLowerCase()
-      .trim()
-      .replace(/[^\w\s-]/g, "")
-      .replace(/[\s_-]+/g, "-")
-      .replace(/^-+|-+$/g, "");
-      
-    const slug = `${baseSlug}-${Math.random().toString(36).substring(2, 7)}`;
-
-    const newPost = new Post({
-      title,
-      content,
-      slug,
-      author: new mongoose.Types.ObjectId(authorId),
-      status: "published",
-    });
-
-    await newPost.save();
-
-    revalidatePath("/author/dashboard");
-    revalidatePath("/reader/dashboard");
-    revalidatePath("/");
-    
-    return { success: true };
-  } catch (error: any) {
-    if (error.code === 11000) return { error: "Title already exists." };
-    return { error: "Failed to save post." };
-  }
-}
-
-// --- 8. UPDATE POST ACTION ---
-export async function updatePost(postId: string, formData: FormData) {
-  const title = formData.get("title") as string;
-  const content = formData.get("content") as string;
-
-  if (!title || !content) return { error: "Title and Content are required" };
-
-  try {
-    await connectDB();
-
-    const baseSlug = title
-      .toLowerCase()
-      .trim()
-      .replace(/[^\w\s-]/g, "")
-      .replace(/[\s_-]+/g, "-")
-      .replace(/^-+|-+$/g, "");
-    
-    const updatedSlug = `${baseSlug}-${Math.random().toString(36).substring(2, 5)}`;
-
-    const updatedPost = await Post.findByIdAndUpdate(
-      postId,
-      { title, content, slug: updatedSlug },
-      { new: true }
-    );
-
-    if (!updatedPost) return { error: "Post not found" };
-
-    revalidatePath("/author/dashboard");
-    revalidatePath(`/post/${updatedSlug}`);
-    revalidatePath("/reader/dashboard");
-    revalidatePath("/");
-
-    return { success: true };
-  } catch (error: any) {
-    if (error.code === 11000) return { error: "An article with this title already exists." };
-    return { error: "Failed to update article." };
   }
 }
