@@ -1,44 +1,54 @@
-"use client";
+'use client';
 
-import { useActionState } from "react"; // Imported from 'react'
+import { useActionState } from "react";
 import { approveAuthor, rejectAuthor } from "@/lib/actions";
+
+interface ActionState {
+  error: string | null;
+  success: boolean;
+}
 
 interface Props {
   id: string;
   type: "approve" | "reject";
 }
+
 const initialState: ActionState = { error: null, success: false };
+
 export default function AdminActionButton({ id, type }: Props) {
+  // Select the correct server action based on type
   const actionToRun = type === "approve" ? approveAuthor : rejectAuthor;
   
-  /**
-   * useActionState hook:
-   * [state] - The value returned from your action
-   * [formAction] - The function to pass to the <form action>
-   * [isPending] - Built-in boolean for loading states
-   */
-  const [state, formAction, isPending] = useActionState(actionToRun, null);
+  // useActionState handles the transition and pending states
+  const [state, formAction, isPending] = useActionState(
+    async (prevState: ActionState) => {
+      // We pass 'id' as the second argument to match the server action signature
+      const result = await actionToRun(prevState, id);
+      return result;
+    },
+    initialState
+  );
 
   return (
-    <form action={formAction} className="relative inline-block">
-      <input type="hidden" name="id" value={id} />
-      <button
-        type="submit"
-        disabled={isPending}
-        className={
-          type === "approve"
-            ? "bg-green-600 text-white px-5 py-2 rounded-xl text-sm font-bold hover:bg-green-700 transition disabled:opacity-50 min-w-[100px]"
-            : "bg-white text-red-600 border border-red-100 px-5 py-2 rounded-xl text-sm font-bold hover:bg-red-50 transition disabled:opacity-50 min-w-[100px]"
-        }
-      >
-        {isPending ? "..." : type === "approve" ? "Approve" : "Reject"}
-      </button>
+    <div className="flex flex-col gap-1">
+      <form action={formAction}>
+        <button 
+          disabled={isPending}
+          className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
+            type === 'approve' 
+              ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-md hover:shadow-emerald-200' 
+              : 'bg-rose-500 text-white hover:bg-rose-600 shadow-md hover:shadow-rose-200'
+          } disabled:opacity-50 disabled:cursor-not-allowed`}
+        >
+          {isPending ? "Processing..." : type}
+        </button>
+      </form>
       
       {state?.error && (
-        <p className="text-[10px] text-red-500 absolute left-0 -bottom-4 whitespace-nowrap">
+        <p className="text-rose-500 text-[10px] font-medium animate-in fade-in slide-in-from-top-1">
           {state.error}
         </p>
       )}
-    </form>
+    </div>
   );
 }

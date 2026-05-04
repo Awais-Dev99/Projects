@@ -3,10 +3,15 @@
 import { connectDB } from "@/lib/mongodb";
 import { authOptions } from "@/lib/auth";
 import Post from "@/models/Post";
-import User from "@/models/User"; 
+import User from "@/models/User";
 import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
-import mongoose from "mongoose"; // Import mongoose for ObjectId casting
+import mongoose from "mongoose";
+
+export type ActionState = {
+  error: string | null;
+  success: boolean;
+};
 
 // --- 1. LIKE / DISLIKE ACTION ---
 export async function handleLikeDislike(postId: string, userId: string, type: "like" | "dislike") {
@@ -40,16 +45,18 @@ export async function addComment(postId: string, userId: string, content: string
   if (!content.trim()) return { error: "Content is required" };
   try {
     await connectDB();
-    const commentData = { 
-      user: new mongoose.Types.ObjectId(userId), // Cast to ObjectId
-      content, 
-      createdAt: new Date() 
+    const commentData = {
+      user: new mongoose.Types.ObjectId(userId),
+      content,
+      createdAt: new Date()
     };
     await Post.findByIdAndUpdate(postId, { $push: { comments: commentData } });
     revalidatePath("/reader/dashboard");
     revalidatePath("/");
+    return { success: true };
   } catch (error) {
     console.error("Add Comment Error:", error);
+    return { error: "Failed to add comment" };
   }
 }
 
@@ -61,8 +68,10 @@ export async function deleteComment(postId: string, commentId: string, userId: s
       $pull: { comments: { _id: commentId, user: userId } }
     });
     revalidatePath("/reader/dashboard");
+    return { success: true };
   } catch (error) {
     console.error("Delete Comment Error:", error);
+    return { error: "Failed to delete comment" };
   }
 }
 
@@ -75,66 +84,65 @@ export async function updateComment(postId: string, commentId: string, userId: s
       { $set: { "comments.$.content": newContent } }
     );
     revalidatePath("/reader/dashboard");
+    return { success: true };
   } catch (error) {
     console.error("Update Comment Error:", error);
+    return { error: "Failed to update comment" };
   }
 }
-export async function deletePost(prevState: any, formData: FormData) {
+
+// --- 5. POST MANAGEMENT (NEXT.JS 15 COMPATIBLE) ---
+export async function deletePost(prevState: any, id: string): Promise<ActionState> {
   try {
     await connectDB();
     const session = await getServerSession(authOptions);
-    const postId = formData.get("id");
+    if (!session) return { error: "Unauthenticated", success: false };
 
-    if (!session) return { error: "Unauthenticated" };
+    const post = await Post.findById(id);
+    if (!post) return { error: "Post not found", success: false };
 
-    const post = await Post.findById(postId);
-    if (!post) return { error: "Post not found" };
-
-    // Security: Check if the user owns the post
-    if (post.author.toString() !== (session.user as any).id && session.user.role !== "admin") {
-      return { error: "Unauthorized" };
+    // Security: Check ownership or admin status
+    if (post.author.toString() !== (session.user as any).id && (session.user as any).role !== "admin") {
+      return { error: "Unauthorized", success: false };
     }
 
-    await Post.findByIdAndDelete(postId);
-    
+    await Post.findByIdAndDelete(id);
     revalidatePath("/author/dashboard");
-    return { success: true };
+    revalidatePath("/");
+    return { error: null, success: true };
   } catch (e) {
-    return { error: "Failed to delete post" };
-  }
-}
-export type ActionState = {
-  error: string | null;
-  success: boolean;
-};
-// --- 5. ADMIN ACTIONS ---
-export async function approveAuthor(prevState: any,formData: FormData) {
-  const userId = formData.get("id") as string;
-  if (!userId) return { error: "User ID is required" };
-  try {
-    await connectDB();
-    await User.findByIdAndUpdate(userId, { status: "approved" });
-    revalidatePath("/admin/dashboard");
-    return { success: true };
-  } catch (error) {
-    return { error: "Failed to approve author" };
+    return { error: "Failed to delete post", success: false };
   }
 }
 
-export async function rejectAuthor(formData: FormData) {
-  const userId = formData.get("id") as string;
-  if (!userId) return { error: "User ID is required" };
+// --- 6. ADMIN ACTIONS (FIXED FOR USEACTIONSTATE) ---
+export async function approveAuthor(prevState: any, userId: string): Promise<ActionState> {
+  if (!userId) return { error: "User ID is required", success: false };
   try {
     await connectDB();
+    // Update role to author and status to approved
+    await User.findByIdAndUpdate(userId, { role: "author", status: "approved" });
+    revalidatePath("/admin/dashboard");
+    return { error: null, success: true };
+  } catch (error) {
+    return { error: "Failed to approve author", success: false };
+  }
+}
+
+export async function rejectAuthor(prevState: any, userId: string): Promise<ActionState> {
+  if (!userId) return { error: "User ID is required", success: false };
+  try {
+    await connectDB();
+    // If rejecting involves deleting the request/user
     await User.findByIdAndDelete(userId);
     revalidatePath("/admin/dashboard");
-    return { success: true };
+    return { error: null, success: true };
   } catch (error) {
-    return { error: "Failed to reject author" };
+    return { error: "Failed to reject author", success: false };
   }
 }
 
-// --- 6. CREATE POST (CRITICAL UPDATE) ---
+// --- 7. CREATE POST ---
 export async function createPost(formData: FormData, authorId: string) {
   const title = formData.get("title") as string;
   const content = formData.get("content") as string;
@@ -144,37 +152,37 @@ export async function createPost(formData: FormData, authorId: string) {
   try {
     await connectDB();
 
-    const slug = title
+    const baseSlug = title
       .toLowerCase()
       .trim()
-      .replace(/[^\w\s-]/g, "") // Clean special characters
-      .replace(/[\s_-]+/g, "-") // Replace spaces/underscores with -
-      .replace(/^-+|-+$/g, ""); // Trim dashes
-      + "-" + Math.random().toString(36).substring(2, 7);
+      .replace(/[^\w\s-]/g, "")
+      .replace(/[\s_-]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+      
+    const slug = `${baseSlug}-${Math.random().toString(36).substring(2, 7)}`;
 
     const newPost = new Post({
       title,
       content,
       slug,
-      author: new mongoose.Types.ObjectId(authorId), // CRITICAL: Convert string ID to ObjectId
+      author: new mongoose.Types.ObjectId(authorId),
       status: "published",
     });
 
     await newPost.save();
 
-    // Revalidate multiple paths to ensure UI updates
     revalidatePath("/author/dashboard");
     revalidatePath("/reader/dashboard");
     revalidatePath("/");
     
     return { success: true };
   } catch (error: any) {
-    console.error("Create Post Error:", error);
     if (error.code === 11000) return { error: "Title already exists." };
     return { error: "Failed to save post." };
   }
 }
-// --- 7. UPDATE POST ACTION ---
+
+// --- 8. UPDATE POST ACTION ---
 export async function updatePost(postId: string, formData: FormData) {
   const title = formData.get("title") as string;
   const content = formData.get("content") as string;
@@ -184,7 +192,6 @@ export async function updatePost(postId: string, formData: FormData) {
   try {
     await connectDB();
 
-    // 1. Generate a clean, updated slug
     const baseSlug = title
       .toLowerCase()
       .trim()
@@ -192,31 +199,23 @@ export async function updatePost(postId: string, formData: FormData) {
       .replace(/[\s_-]+/g, "-")
       .replace(/^-+|-+$/g, "");
     
-    // Optional: Keep the slug unique by adding a short random string
     const updatedSlug = `${baseSlug}-${Math.random().toString(36).substring(2, 5)}`;
 
-    // 2. Perform the update
     const updatedPost = await Post.findByIdAndUpdate(
       postId,
-      {
-        title,
-        content,
-        slug: updatedSlug,
-      },
-      { new: true } // returns the updated document
+      { title, content, slug: updatedSlug },
+      { new: true }
     );
 
     if (!updatedPost) return { error: "Post not found" };
 
-    // 3. Revalidate paths to clear the Next.js cache
     revalidatePath("/author/dashboard");
-    revalidatePath(`/post/${updatedSlug}`); // Revalidate the new slug path
+    revalidatePath(`/post/${updatedSlug}`);
     revalidatePath("/reader/dashboard");
     revalidatePath("/");
 
     return { success: true };
   } catch (error: any) {
-    console.error("Update Post Error:", error);
     if (error.code === 11000) return { error: "An article with this title already exists." };
     return { error: "Failed to update article." };
   }
