@@ -1,27 +1,22 @@
-// app/dashboard/layout.tsx
 import Link from "next/link";
-import { LayoutDashboard, User, Bell, LogOut } from "lucide-react";
+import { LayoutDashboard, User, Bell } from "lucide-react";
+import LogoutButton from "../../components/employees/LogoutButton"; // Import the new component
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Desktop Header */}
       <header className="hidden md:flex bg-white border-b border-slate-200 px-8 py-4 justify-between items-center sticky top-0 z-50">
-        <div className="font-bold text-xl text-blue-600">Employee Portal</div>
-        <nav className="flex gap-6">
-          <Link href="/dashboard" className="text-slate-600 hover:text-blue-600 font-medium">Dashboard</Link>
-          <Link href="/dashboard/profile" className="text-slate-600 hover:text-blue-600 font-medium">My Profile</Link>
-          <button className="text-red-500 font-medium flex items-center gap-2">
-            <LogOut size={18} /> Logout
-          </button>
+        <Link href="/dashboard" className="font-bold text-xl text-blue-600">Home</Link>
+        <nav className="flex gap-6 items-center">
+          <Link href="/dashboard/alerts" className="text-slate-600 hover:text-blue-600 font-medium">Alerts</Link>
+          {/* Desktop Logout */}
+          <LogoutButton variant="desktop" /> 
         </nav>
       </header>
 
-      {/* Main Content Area */}
       <main className="flex-1 p-4 md:p-8 lg:p-12 pb-24 md:pb-8">
-        <div className="max-w-4xl mx-auto">
-          {children}
-        </div>
+        <div className="max-w-4xl mx-auto">{children}</div>
       </main>
 
       {/* Mobile Bottom Navigation */}
@@ -34,14 +29,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <User size={24} />
           <span className="text-[10px] font-bold uppercase">Profile</span>
         </Link>
-        <button className="flex flex-col items-center gap-1 text-slate-400">
-          <Bell size={24} />
-          <span className="text-[10px] font-bold uppercase">Alerts</span>
-        </button>
-        <button className="flex flex-col items-center gap-1 text-red-400">
-          <LogOut size={24} />
-          <span className="text-[10px] font-bold uppercase">Exit</span>
-        </button>
+        <Link href="/dashboard/alerts" className="flex flex-col items-center gap-1 text-slate-400 hover:text-blue-600">
+  <Bell size={24} />
+  <span className="text-[10px] font-bold uppercase">Alerts</span>
+</Link>
+        {/* Mobile Logout */}
+        <LogoutButton variant="mobile" />
       </nav>
     </div>
   );

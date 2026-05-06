@@ -1,8 +1,8 @@
-// app/api/auth/[...nextauth]/route.ts
 import NextAuth, { NextAuthOptions, Session, User } from "next-auth";
 import { JWT } from "next-auth/jwt";
 import CredentialsProvider from "next-auth/providers/credentials";
 import clientPromise from "@/lib/mongodb";
+import bcrypt from "bcrypt";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -16,28 +16,48 @@ export const authOptions: NextAuthOptions = {
         if (!credentials?.username || !credentials?.password) return null;
 
         const client = await clientPromise;
-        const db = client.db();
+        // Ensure this matches the DB name used in your EmployeesPage
+        const db = client.db("ems_database"); 
         
-        // Find the employee account created by the Admin
-        const user = await db.collection("users").findOne({ 
-          username: credentials.username 
+        // Remove '@' if the user typed it, and trim whitespace
+        const cleanUsername = credentials.username.replace(/^@/, "").trim();
+
+        // Search the "employees" collection (matching your getEmployees logic)
+        const user = await db.collection("employees").findOne({
+          username: { $regex: new RegExp(`^${cleanUsername}$`, "i") }
         });
 
-        // Verify credentials and check if the account is active
-        if (user && user.password === credentials.password && user.accountStatus === 'active') {
-          return {
-            id: user._id.toString(),
-            name: user.name,
-            email: user.email,
-            role: user.role, // e.g., 'admin', 'employee'
-          };
+        if (!user) {
+          console.log(`❌ AUTH ERROR: No employee found with username "${cleanUsername}"`);
+          return null;
         }
-        return null;
+
+        // Validate the $2b$ hash from your database screenshot
+        const isPasswordCorrect = await bcrypt.compare(
+          credentials.password,
+          user.password
+        );
+
+        if (!isPasswordCorrect) {
+          console.log(`❌ AUTH ERROR: Password incorrect for ${cleanUsername}`);
+          return null;
+        }
+
+        if (user.accountStatus !== 'active') {
+          console.log(`❌ AUTH ERROR: Account ${cleanUsername} is ${user.accountStatus}`);
+          return null;
+        }
+
+        return {
+          id: user._id.toString(),
+          name: user.name,
+          email: user.username, 
+          role: user.role,
+        };
       }
     }),
   ],
   callbacks: {
-    // Explicitly type parameters to resolve "implicit any" errors
     async jwt({ token, user }: { token: JWT; user?: User }) {
       if (user) token.role = user.role;
       return token;
