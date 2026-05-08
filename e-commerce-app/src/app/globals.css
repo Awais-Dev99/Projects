@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+/* If you have custom @apply rules, you MUST have this line below */
+@reference "tailwindcss";
+
+@layer base {
+  body {
+    @apply bg-white text-black;
+  }
+}
