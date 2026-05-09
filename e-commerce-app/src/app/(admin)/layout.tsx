@@ -4,7 +4,7 @@ import { LayoutDashboard, Package, ShoppingCart, Home } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const navItems = [
-    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Products', href: '/products', icon: Package },
     { name: 'Orders', href: '/orders', icon: ShoppingCart },
   ];
