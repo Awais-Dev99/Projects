@@ -1,31 +1,31 @@
-import mongoose, { Schema, model, models } from 'mongoose';
+import mongoose from "mongoose";
 
-const OrderSchema = new Schema({
-  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+const OrderSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true, // Orders must be tied to an authenticated user
+  },
+  user: {
+    name: { type: String, required: true },
+    email: { type: String, required: true },
+    address: { type: String, required: true },
+    phone: { type: String, required: true },
+  },
   items: [
     {
-      productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
-      title: { type: String, required: true },
-      quantity: { type: Number, required: true },
-      price: { type: Number, required: true },
+      productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+      title: String,
+      quantity: Number,
+      price: Number,
     }
   ],
-  totalAmount: { type: Number, required: true },
-  shippingAddress: {
-    street: String,
-    city: String,
-    state: String,
-    zipCode: String,
-    country: String,
-  },
-  status: { 
-    type: String, 
-    enum: ['Processing', 'Shipped', 'Out for Delivery', 'Delivered'], 
-    default: 'Processing' 
-  },
-  trackingNumber: { type: String, default: '' },
-  paymentIntentId: { type: String }, // For Stripe reconciliation
-}, { timestamps: true });
+  totalPrice: { type: Number, required: true },
+  paymentMethod: { type: String, default: "Credit Card" },
+  cardLast4: { type: String, required: true },
+  cardExpiry: { type: String, required: true },
+  status: { type: String, default: "Pending" }, // Pending, Processing, Shipped, Delivered, Cancelled
+  createdAt: { type: Date, default: Date.now },
+});
 
-const Order = models.Order || model('Order', OrderSchema);
-export default Order;
+export default mongoose.models.Order || mongoose.model("Order", OrderSchema);

@@ -1,8 +1,26 @@
+"use client";
+
 import React from 'react';
 import Link from 'next/link';
-import { ShoppingCart, User, Search } from 'lucide-react';
+import { ShoppingCart, User, Search, LogOut } from 'lucide-react';
+import { useSession, signOut } from 'next-auth/react';
+import { useCart } from './../../context/CartContext';
 
 export default function ShopLayout({ children }: { children: React.ReactNode }) {
+  const { data: session } = useSession();
+  const { cart } = useCart();
+
+  // Calculate total items in cart
+  const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
+
+  const handleLogout = () => {
+    signOut({ callbackUrl: '/' });
+    // Force a page reload to ensure session is cleared
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 100);
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b">
@@ -18,11 +36,29 @@ export default function ShopLayout({ children }: { children: React.ReactNode }) 
 
           <div className="flex items-center space-x-5">
             <button className="hover:text-blue-600"><Search size={20} /></button>
-            <Link href="/cart" className="relative hover:text-blue-600">
+            <Link 
+              href={session ? "/cart" : "/login?callback=/cart"} 
+              className="relative hover:text-blue-600"
+            >
               <ShoppingCart size={20} />
-              <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-[10px] font-bold px-1.5 rounded-full">0</span>
+              {totalItems > 0 && session && (
+                <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-[10px] font-bold px-1.5 rounded-full min-w-[18px] text-center">
+                  {totalItems}
+                </span>
+              )}
             </Link>
-            <Link href="/login" className="hover:text-blue-600"><User size={20} /></Link>
+            <Link href={session ? "/profile" : "/login"} className="hover:text-blue-600">
+              <User size={20} />
+            </Link>
+            {session && (
+              <button
+                onClick={handleLogout}
+                className="hover:text-red-600 ml-2"
+                title="Logout"
+              >
+                <LogOut size={20} />
+              </button>
+            )}
           </div>
         </div>
       </nav>

@@ -1,56 +1,60 @@
-"use client";
+﻿"use client";
+import { useCart } from "./../../context/CartContext";
+import { useSession } from "next-auth/react";
+import { useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
+import { toast } from "react-hot-toast";
 
-import Image from 'next/image';
-import Link from 'next/link';
-import { ShoppingBag, Star } from 'lucide-react';
+export default function ProductCard({ product }: { product: any }) {
+  const { addToCart } = useCart();
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const pathname = usePathname();
 
-interface ProductProps {
-  product: {
-    _id: string;
-    title: string;
-    price: number;
-    images: string[];
-    category: string;
+  const isUnauthorized = status === "unauthenticated" || (!session && status !== "loading");
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (isUnauthorized) {
+      toast.error("Please log in to add items to cart");
+      router.push("/login?callback=" + encodeURIComponent(pathname));
+      return;
+    }
+
+    if (status === "loading") {
+      return;
+    }
+
+    addToCart(product);
+    toast.success(`${product.title} added to cart!`);
   };
-}
 
-export default function ProductCard({ product }: ProductProps) {
   return (
-    <div className="group bg-white rounded-2xl border border-gray-100 p-3 hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300">
-      <Link href={`/products/${product._id}`}>
-        <div className="relative aspect-square rounded-xl overflow-hidden bg-gray-50">
-          <img
-            src={product.images[0] || "/placeholder.png"}
-            alt={product.title}
-            className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-500"
-          />
-          <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md text-[10px] font-bold text-blue-600 uppercase">
-            {product.category}
-          </div>
-        </div>
-      </Link>
-
-      <div className="mt-4 px-1">
-        <div className="flex items-center gap-1 mb-1">
-          {[...Array(5)].map((_, i) => (
-            <Star key={i} size={12} className="fill-yellow-400 text-yellow-400" />
-          ))}
-          <span className="text-[10px] text-gray-400 ml-1">(4.8)</span>
-        </div>
-        
-        <Link href={`/products/${product._id}`}>
-          <h3 className="font-bold text-gray-900 truncate hover:text-blue-600 transition-colors">
-            {product.title}
-          </h3>
-        </Link>
-        
-        <div className="flex items-center justify-between mt-3">
-          <p className="text-lg font-black text-gray-900">${product.price}</p>
-          <button className="p-2.5 bg-gray-900 text-white rounded-xl hover:bg-blue-600 transition-colors shadow-sm">
-            <ShoppingBag size={18} />
-          </button>
-        </div>
+    <Link
+      href={`/product/${product._id}`}
+      className="block bg-white rounded-3xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow"
+    >
+      <div className="aspect-square bg-gray-50 rounded-2xl overflow-hidden mb-4">
+        <img
+          src={product.images && product.images.length > 0 ? product.images[0] : '/placeholder.png'}
+          alt={product.title}
+          className="w-full h-full object-cover"
+        />
       </div>
-    </div>
+      <h3 className="font-bold text-gray-900 text-lg line-clamp-1">{product.title}</h3>
+      <div className="flex justify-between items-center mt-4">
+        <span className="text-blue-600 font-black text-xl">${product.price}</span>
+        <button
+          onClick={handleAddToCart}
+          disabled={isUnauthorized || status === "loading"}
+          title={isUnauthorized ? "Log in to enable adding products" : undefined}
+          className="bg-gray-900 text-white px-6 py-2 rounded-xl font-bold hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {status === "loading" ? "Loading..." : isUnauthorized ? "Login to Add" : "Add"}
+        </button>
+      </div>
+    </Link>
   );
 }

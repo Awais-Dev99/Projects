@@ -1,19 +1,25 @@
-import React from 'react';
-import { cn } from './../../lib/utils';
+// src/components/ui/Input.tsx
+import * as React from "react"
 
-export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
-  ({ className, ...props }, ref) => {
+export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  label?: string; // Add this line
+}
+
+const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className, type, label, ...props }, ref) => {
     return (
-      <input
-        ref={ref}
-        className={cn(
-          "flex h-11 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all",
-          className
-        )}
-        {...props}
-      />
-    );
+      <div className="w-full space-y-1.5">
+        {label && <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">{label}</label>}
+        <input
+          type={type}
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          ref={ref}
+          {...props}
+        />
+      </div>
+    )
   }
-);
+)
+Input.displayName = "Input"
 
-Input.displayName = "Input";
+export { Input }

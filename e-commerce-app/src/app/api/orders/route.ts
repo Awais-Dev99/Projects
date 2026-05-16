@@ -1,68 +1,53 @@
 import { NextResponse } from 'next/server';
-import { connectToDatabase } from './../../../lib/db';
+import { connectToDatabase } from './../../../lib/db'; 
 import Order from './../../../models/Order';
-import Product from './../../../models/Product';
 
-// POST: Create a new order after successful checkout
 export async function POST(request: Request) {
   try {
     await connectToDatabase();
     const body = await request.json();
-    
-    const { 
-      userId, 
-      items, 
-      totalAmount, 
-      shippingAddress, 
-      paymentIntentId 
-    } = body;
+    const { userId, user, items, totalPrice, cardLast4, cardExpiry, paymentMethod } = body;
 
-    // 1. Basic Validation
-    if (!items || items.length === 0) {
-      return NextResponse.json({ error: "No items in order" }, { status: 400 });
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized. Please log in to place an order." }, { status: 401 });
     }
 
-    // 2. Create the Order in MongoDB
-    // Note: status defaults to 'Processing' based on our brainstormed schema
+    if (!user || !items || !totalPrice || !cardLast4 || !cardExpiry) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
     const newOrder = await Order.create({
       userId,
+      user,
       items,
-      totalAmount,
-      shippingAddress,
-      paymentIntentId,
-      status: 'Processing',
-      createdAt: new Date(),
+      totalPrice,
+      paymentMethod: paymentMethod || "Credit Card",
+      cardLast4,
+      cardExpiry,
     });
 
-    // 3. Inventory Control: Update stock levels
-    // We loop through each ordered item and decrement the stock in the Product collection
-    const updateInventory = items.map((item: any) => 
-      Product.findByIdAndUpdate(item.productId, {
-        $inc: { stock: -item.quantity }
-      })
-    );
-    await Promise.all(updateInventory);
-
     return NextResponse.json(newOrder, { status: 201 });
-  } catch (error) {
-    console.error("Order Creation Error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-// GET: Fetch orders for a specific user (User History) 
-// or all orders (if requested by Admin)
 export async function GET(request: Request) {
   try {
     await connectToDatabase();
+    
+    // Get query params to filter by userId if provided
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
-    // If a userId is provided, filter by user (Shop Side)
-    // Otherwise, return all orders (Admin Side)
-    const query = userId ? { userId } : {};
-    const orders = await Order.find(query).sort({ createdAt: -1 });
+    // If userId is provided, fetch only that user's orders
+    if (userId) {
+      const orders = await Order.find({ userId }).sort({ createdAt: -1 });
+      return NextResponse.json(orders);
+    }
 
+    // Otherwise return all orders (for admin)
+    const orders = await Order.find().sort({ createdAt: -1 });
     return NextResponse.json(orders);
   } catch (error) {
     return NextResponse.json({ error: "Failed to fetch orders" }, { status: 500 });

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Facebook, Twitter, Instagram, Mail } from 'lucide-react';
+import { Mail } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -33,9 +33,7 @@ export default function Footer() {
         <div>
           <h4 className="font-bold mb-4">Follow Us</h4>
           <div className="flex space-x-4">
-            <button className="p-2 bg-white border rounded-full hover:text-blue-600 transition-colors"><Twitter size={18} /></button>
-            <button className="p-2 bg-white border rounded-full hover:text-pink-600 transition-colors"><Instagram size={18} /></button>
-            <button className="p-2 bg-white border rounded-full hover:text-blue-800 transition-colors"><Facebook size={18} /></button>
+            <button className="p-2 bg-white border rounded-full hover:text-blue-600 transition-colors"><Mail size={18} /></button>
           </div>
         </div>
       </div>

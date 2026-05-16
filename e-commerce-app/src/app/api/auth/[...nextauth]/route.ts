@@ -1,10 +1,10 @@
-import NextAuth from "next-auth";
+import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { connectToDatabase } from "./../../../../lib/db";
 import User from "./../../../../models/User";
 import bcrypt from "bcryptjs";
 
-const handler = NextAuth({
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -13,59 +13,71 @@ const handler = NextAuth({
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        await connectToDatabase();
+        try {
+          await connectToDatabase();
 
-        // 1. Check if user exists
-        const user = await User.findOne({ email: credentials?.email });
-        if (!user) {
-          throw new Error("No user found with this email");
+          if (!credentials?.email || !credentials?.password) {
+            throw new Error("Missing credentials");
+          }
+
+          // Use .select("+password") if your schema has password hidden by default
+          const user = await User.findOne({ email: credentials.email.toLowerCase() });
+          
+          if (!user) {
+            throw new Error("Invalid email or password");
+          }
+
+          const isValid = await bcrypt.compare(
+            credentials.password,
+            user.password
+          );
+
+          if (!isValid) {
+            throw new Error("Invalid email or password");
+          }
+
+          // Return a clean user object
+          return {
+            id: user._id.toString(),
+            email: user.email,
+            name: user.name,
+            role: user.role || "user",
+          };
+        } catch (error: any) {
+          console.error("Auth Error:", error.message);
+          return null; // Returning null fails the auth attempt safely
         }
-
-        // 2. Verify password
-        const isValid = await bcrypt.compare(
-          credentials!.password,
-          user.password
-        );
-
-        if (!isValid) {
-          throw new Error("Invalid password");
-        }
-
-        // 3. Return user object (including the role)
-        return {
-          id: user._id.toString(),
-          email: user.email,
-          name: user.name,
-          role: user.role, // This is crucial for Admin access
-        };
       },
     }),
   ],
   callbacks: {
-    // Save the user role into the JWT token
-    async jwt({ token, user }: any) {
+    async jwt({ token, user }) {
+      // This runs only on the initial login
       if (user) {
-        token.role = user.role;
+        token.role = (user as any).role;
         token.id = user.id;
       }
       return token;
     },
-    // Make the role available in the client-side session
-    async session({ session, token }: any) {
+    async session({ session, token }) {
+      // This runs whenever the session is checked
       if (session.user) {
-        session.user.role = token.role;
-        session.user.id = token.id;
+        (session.user as any).role = token.role;
+        (session.user as any).id = token.id;
       }
       return session;
     },
   },
   pages: {
-    signIn: "/login", // Custom login page we built earlier
+    signIn: "/login",
+    error: "/login", // Redirect back to login on errors
   },
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 Days session life
   },
   secret: process.env.NEXTAUTH_SECRET,
-});
+};
 
+const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
