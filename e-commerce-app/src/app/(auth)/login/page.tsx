@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "./../../../components/ui/Button";
 import { Input } from "./../../../components/ui/Input";
@@ -37,7 +37,14 @@ function LoginForm() {
         toast.error(res.error);
       } else {
         toast.success("Welcome back!");
-        router.push(callbackUrl); // Redirect to callback URL or home
+        // Fetch session to determine role and redirect accordingly
+        const session = await getSession();
+        const role = (session?.user as any)?.role;
+        if (role === "admin") {
+          router.push("/admin/dashboard");
+        } else {
+          router.push(callbackUrl);
+        }
         router.refresh();
       }
     } catch {

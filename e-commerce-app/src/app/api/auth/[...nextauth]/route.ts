@@ -20,7 +20,26 @@ export const authOptions: NextAuthOptions = {
             throw new Error("Missing credentials");
           }
 
-          // Use .select("+password") if your schema has password hidden by default
+          // First, check if credentials match the admin credentials stored in env
+          const adminEmail = process.env.ADMIN_EMAIL;
+          const adminPassword = process.env.ADMIN_PASSWORD;
+
+          if (
+            adminEmail &&
+            adminPassword &&
+            credentials.email.toLowerCase() === adminEmail.toLowerCase() &&
+            credentials.password === adminPassword
+          ) {
+            // Return a simple admin user object (not persisted)
+            return {
+              id: "admin",
+              email: adminEmail,
+              name: "Administrator",
+              role: "admin",
+            };
+          }
+
+          // Otherwise fall back to database-backed users
           const user = await User.findOne({ email: credentials.email.toLowerCase() });
           
           if (!user) {
